@@ -384,6 +384,14 @@ function removeFromQuote(itemId) {
     showNotification('Item removido da cotação');
 }
 
+// Toggle item details visibility
+function toggleItemDetails(index) {
+    const card = document.querySelector(`[data-item-index="${index}"]`);
+    if (card) {
+        card.classList.toggle('collapsed');
+    }
+}
+
 // Clear entire quote
 function clearQuote() {
     if (quoteItems.length === 0) {
@@ -437,19 +445,34 @@ function renderQuote() {
     quoteSummary.style.display = 'block';
     
     // Render items
-    quoteItemsContainer.innerHTML = quoteItems.map(item => {
+    quoteItemsContainer.innerHTML = quoteItems.map((item, index) => {
         const itemIcon = item.type === 'license' ? '📦' : '🔌';
         const itemTypeLabel = item.type === 'license' ? 'Licença' : 'Add-on';
         
         return `
-        <div class="quote-item ${item.type === 'addon' ? 'addon-item-card' : ''}" data-id="${item.id}">
-            <div class="quote-item-header">
-                <div class="quote-item-title">
-                    <span class="item-icon">${itemIcon}</span>
-                    <strong>${item.name}</strong> - ${item.quantity} usuário${item.quantity > 1 ? 's' : ''}
-                    <span class="contract-badge">${item.contract.name}</span>
+        <div class="quote-item ${item.type === 'addon' ? 'addon-item-card' : ''} collapsed" data-id="${item.id}" data-item-index="${index}">
+            <div class="quote-item-header" onclick="toggleItemDetails(${index})">
+                <div class="quote-item-header-content">
+                    <div class="quote-item-title">
+                        <span class="collapse-icon">▼</span>
+                        <span class="item-icon">${itemIcon}</span>
+                        <strong>${item.name}</strong>
+                    </div>
+                    <div class="quote-item-summary">
+                        <span class="summary-item">
+                            <strong>${item.quantity}</strong> ${item.quantity === 1 ? 'usuário' : 'usuários'}
+                        </span>
+                        <span class="summary-item">
+                            ${item.contract.name}
+                        </span>
+                        <span class="summary-item total-summary">
+                            💰 <strong>${formatCurrency(item.total)}</strong>
+                        </span>
+                    </div>
                 </div>
-                <button class="btn-remove" onclick="removeFromQuote(${item.id})">✕</button>
+                <div class="header-actions">
+                    <button onclick="event.stopPropagation(); removeFromQuote(${item.id})" class="btn-remove" title="Remover item">✕</button>
+                </div>
             </div>
             <div class="quote-item-details">
                 <div class="detail-row type-row">
