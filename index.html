@@ -91,9 +91,19 @@
                     </div>
                     
                     <div class="action-buttons">
-                        <button id="printBtn" class="btn-secondary">🖨️ Imprimir Cotação</button>
-                        <button id="exportBtn" class="btn-secondary">📄 Exportar PDF</button>
+                        <button id="saveQuoteBtn" class="btn-secondary">💾 Salvar Cotação</button>
+                        <button id="historyBtn" class="btn-secondary">📋 Histórico</button>
+                        <button id="printBtn" class="btn-secondary">🖨️ Imprimir</button>
                     </div>
+                </div>
+                
+                <!-- History Panel -->
+                <div id="historyPanel" class="history-panel" style="display: none;">
+                    <div class="history-header">
+                        <h3>📋 Cotações Salvas</h3>
+                        <button onclick="toggleHistoryPanel()" class="btn-close-history">✕</button>
+                    </div>
+                    <div id="historyList" class="history-list"></div>
                 </div>
             </div>
         </main>

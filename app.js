@@ -5,6 +5,104 @@
 let quoteItems = [];
 let quoteIdCounter = 1;
 
+// Storage Manager for persistence
+const StorageManager = {
+    STORAGE_KEY: 'clickup_quotes_history',
+    CURRENT_KEY: 'clickup_current_quote',
+    
+    // Save current quote to localStorage (auto-save)
+    saveCurrentQuote() {
+        const currentData = {
+            items: quoteItems,
+            counter: quoteIdCounter,
+            timestamp: new Date().toISOString()
+        };
+        localStorage.setItem(this.CURRENT_KEY, JSON.stringify(currentData));
+    },
+    
+    // Load current quote from localStorage
+    loadCurrentQuote() {
+        const data = localStorage.getItem(this.CURRENT_KEY);
+        if (data) {
+            try {
+                const parsed = JSON.parse(data);
+                quoteItems = parsed.items || [];
+                quoteIdCounter = parsed.counter || 1;
+                return true;
+            } catch (e) {
+                console.error('Error loading quote:', e);
+                return false;
+            }
+        }
+        return false;
+    },
+    
+    // Clear current quote
+    clearCurrentQuote() {
+        localStorage.removeItem(this.CURRENT_KEY);
+    },
+    
+    // Save named quote to history
+    saveToHistory(name) {
+        if (quoteItems.length === 0) {
+            alert('Adicione itens à cotação antes de salvar');
+            return null;
+        }
+        
+        const history = this.getHistory();
+        const quoteTotal = quoteItems.reduce((sum, item) => sum + item.total, 0);
+        
+        const savedQuote = {
+            id: Date.now(),
+            name: name || `Cotação ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}`,
+            items: JSON.parse(JSON.stringify(quoteItems)), // Deep copy
+            total: quoteTotal,
+            timestamp: new Date().toISOString(),
+            itemCount: quoteItems.length
+        };
+        
+        history.unshift(savedQuote);
+        
+        // Keep only last 50 quotes
+        if (history.length > 50) {
+            history.length = 50;
+        }
+        
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(history));
+        return savedQuote;
+    },
+    
+    // Get all saved quotes
+    getHistory() {
+        const data = localStorage.getItem(this.STORAGE_KEY);
+        return data ? JSON.parse(data) : [];
+    },
+    
+    // Load a quote from history
+    loadFromHistory(id) {
+        const history = this.getHistory();
+        const quote = history.find(q => q.id === id);
+        if (quote) {
+            quoteItems = JSON.parse(JSON.stringify(quote.items)); // Deep copy
+            quoteIdCounter = Math.max(...quoteItems.map(i => i.id), 0) + 1;
+            this.saveCurrentQuote();
+            renderQuote();
+            showNotification('Cotação carregada com sucesso!');
+            return true;
+        }
+        return false;
+    },
+    
+    // Delete quote from history
+    deleteFromHistory(id) {
+        const history = this.getHistory();
+        const filtered = history.filter(q => q.id !== id);
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(filtered));
+        renderHistory();
+        showNotification('Cotação excluída');
+    }
+};
+
 // Get quantity-based discount
 function getQuantityDiscount(quantity) {
     const tier = CONFIG.quantityDiscounts.find(t => quantity >= t.min && quantity <= t.max);
@@ -175,6 +273,9 @@ function addToQuote() {
     // Update UI
     renderQuote();
     
+    // Auto-save to localStorage
+    StorageManager.saveCurrentQuote();
+    
     // Show success feedback
     showNotification('Item adicionado à cotação!');
 }
@@ -183,6 +284,7 @@ function addToQuote() {
 function removeFromQuote(itemId) {
     quoteItems = quoteItems.filter(item => item.id !== itemId);
     renderQuote();
+    StorageManager.saveCurrentQuote();
     showNotification('Item removido da cotação');
 }
 
@@ -193,6 +295,7 @@ function clearQuote() {
     if (confirm('Deseja realmente limpar toda a cotação?')) {
         quoteItems = [];
         renderQuote();
+        StorageManager.clearCurrentQuote();
         showNotification('Cotação limpa');
     }
 }
@@ -304,12 +407,100 @@ function exportToPDF() {
     alert('Função de exportação PDF em desenvolvimento.\nPor enquanto, use o botão Imprimir e salve como PDF.');
 }
 
+// Save current quote to history
+function saveQuoteToHistory() {
+    const name = prompt('Digite um nome para esta cotação:', `Cotação ${new Date().toLocaleDateString('pt-BR')}`);
+    if (name === null) return; // User cancelled
+    
+    const saved = StorageManager.saveToHistory(name);
+    if (saved) {
+        showNotification(`Cotação "${saved.name}" salva com sucesso!`);
+        renderHistory();
+    }
+}
+
+// Toggle history panel
+function toggleHistoryPanel() {
+    const panel = document.getElementById('historyPanel');
+    const isVisible = panel.style.display !== 'none';
+    panel.style.display = isVisible ? 'none' : 'block';
+    
+    if (!isVisible) {
+        renderHistory();
+    }
+}
+
+// Render history panel
+function renderHistory() {
+    const historyContainer = document.getElementById('historyList');
+    const history = StorageManager.getHistory();
+    
+    if (history.length === 0) {
+        historyContainer.innerHTML = '<p class="empty-history">Nenhuma cotação salva ainda</p>';
+        return;
+    }
+    
+    historyContainer.innerHTML = history.map(quote => {
+        const date = new Date(quote.timestamp);
+        const dateStr = date.toLocaleDateString('pt-BR');
+        const timeStr = date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+        
+        return `
+            <div class="history-item">
+                <div class="history-item-header">
+                    <div class="history-item-info">
+                        <strong>${quote.name}</strong>
+                        <small>${dateStr} às ${timeStr}</small>
+                    </div>
+                    <div class="history-item-actions">
+                        <button onclick="loadQuoteFromHistory(${quote.id})" class="btn-load" title="Carregar">
+                            📂
+                        </button>
+                        <button onclick="deleteQuoteFromHistory(${quote.id})" class="btn-delete-history" title="Excluir">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+                <div class="history-item-details">
+                    <span>${quote.itemCount} item${quote.itemCount > 1 ? 's' : ''}</span>
+                    <span class="history-total">${formatCurrency(quote.total)}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Load quote from history
+function loadQuoteFromHistory(id) {
+    if (quoteItems.length > 0) {
+        if (!confirm('A cotação atual será substituída. Deseja continuar?')) {
+            return;
+        }
+    }
+    StorageManager.loadFromHistory(id);
+    toggleHistoryPanel();
+}
+
+// Delete quote from history
+function deleteQuoteFromHistory(id) {
+    if (confirm('Deseja realmente excluir esta cotação do histórico?')) {
+        StorageManager.deleteFromHistory(id);
+    }
+}
+
 // Event listeners
 document.addEventListener('DOMContentLoaded', () => {
+    // Load saved quote on startup
+    if (StorageManager.loadCurrentQuote()) {
+        renderQuote();
+    }
+    
     document.getElementById('addToQuoteBtn').addEventListener('click', addToQuote);
     document.getElementById('clearQuoteBtn').addEventListener('click', clearQuote);
     document.getElementById('printBtn').addEventListener('click', printQuotation);
     document.getElementById('exportBtn').addEventListener('click', exportToPDF);
+    document.getElementById('saveQuoteBtn').addEventListener('click', saveQuoteToHistory);
+    document.getElementById('historyBtn').addEventListener('click', toggleHistoryPanel);
     
     // Toggle between license and addon fields
     document.getElementById('productType').addEventListener('change', (e) => {
