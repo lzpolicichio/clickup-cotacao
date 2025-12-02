@@ -98,15 +98,6 @@
                         <button id="printBtn" class="btn-secondary">🖨️ Imprimir</button>
                     </div>
                 </div>
-                
-                <!-- History Panel -->
-                <div id="historyPanel" class="history-panel" style="display: none;">
-                    <div class="history-header">
-                        <h3>📋 Cotações Salvas</h3>
-                        <button onclick="toggleHistoryPanel()" class="btn-close-history">✕</button>
-                    </div>
-                    <div id="historyList" class="history-list"></div>
-                </div>
             </div>
         </main>
 
@@ -136,6 +127,19 @@
             <div class="modal-footer">
                 <button class="btn-cancel" onclick="closeSaveModal()">Cancelar</button>
                 <button class="btn-confirm" onclick="confirmSaveQuote()">💾 Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Histórico -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3>📋 Histórico de Cotações</h3>
+                <button class="modal-close" onclick="closeHistoryModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="historyList"></div>
             </div>
         </div>
     </div>

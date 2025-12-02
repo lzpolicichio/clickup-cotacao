@@ -290,13 +290,16 @@ function removeFromQuote(itemId) {
 
 // Clear entire quote
 function clearQuote() {
-    if (quoteItems.length === 0) return;
+    if (quoteItems.length === 0) {
+        showNotification('Não há itens para limpar');
+        return;
+    }
     
-    if (confirm('Deseja realmente limpar toda a cotação?')) {
+    if (confirm('Tem certeza que deseja limpar toda a cotação?')) {
         quoteItems = [];
         renderQuote();
         StorageManager.clearCurrentQuote();
-        showNotification('Cotação limpa');
+        showNotification('Cotação limpa com sucesso!');
     }
 }
 
@@ -463,18 +466,22 @@ function confirmSaveQuote() {
     }
 }
 
-// Toggle history panel
+// Open history modal
 function toggleHistoryPanel() {
-    const panel = document.getElementById('historyPanel');
-    const isVisible = panel.style.display !== 'none';
-    panel.style.display = isVisible ? 'none' : 'block';
-    
-    if (!isVisible) {
-        renderHistory();
+    const modal = document.getElementById('historyModal');
+    modal.classList.add('active');
+    renderHistory();
+}
+
+// Close history modal
+function closeHistoryModal() {
+    const modal = document.getElementById('historyModal');
+    if (modal) {
+        modal.classList.remove('active');
     }
 }
 
-// Render history panel
+// Render history modal
 function renderHistory() {
     const historyContainer = document.getElementById('historyList');
     if (!historyContainer) {
@@ -485,7 +492,13 @@ function renderHistory() {
     const history = StorageManager.getHistory();
     
     if (history.length === 0) {
-        historyContainer.innerHTML = '<p class="empty-history">Nenhuma cotação salva ainda</p>';
+        historyContainer.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #999;">
+                <p style="font-size: 48px; margin: 0;">📋</p>
+                <p style="margin: 16px 0 8px;">Nenhuma cotação salva ainda</p>
+                <p style="font-size: 14px; color: #aaa;">Crie e salve sua primeira cotação para vê-la aqui</p>
+            </div>
+        `;
         return;
     }
     
@@ -503,7 +516,7 @@ function renderHistory() {
                     </div>
                     <div class="history-item-actions">
                         <button onclick="loadQuoteFromHistory(${quote.id})" class="btn-load" title="Carregar">
-                            📂
+                            📂 Carregar
                         </button>
                         <button onclick="deleteQuoteFromHistory(${quote.id})" class="btn-delete-history" title="Excluir">
                             🗑️
@@ -511,8 +524,8 @@ function renderHistory() {
                     </div>
                 </div>
                 <div class="history-item-details">
-                    <span>${quote.itemCount} item${quote.itemCount > 1 ? 's' : ''}</span>
-                    <span class="history-total">${formatCurrency(quote.total)}</span>
+                    <span>📦 ${quote.itemCount} item${quote.itemCount > 1 ? 's' : ''}</span>
+                    <span class="history-total">💰 ${formatCurrency(quote.total)}</span>
                 </div>
             </div>
         `;
@@ -521,19 +534,32 @@ function renderHistory() {
 
 // Load quote from history
 function loadQuoteFromHistory(id) {
-    if (quoteItems.length > 0) {
-        if (!confirm('A cotação atual será substituída. Deseja continuar?')) {
-            return;
-        }
-    }
+    // Limpar cotação atual primeiro
+    quoteItems = [];
+    
+    // Carregar cotação do histórico
     StorageManager.loadFromHistory(id);
-    toggleHistoryPanel();
+    
+    // Fechar modal de histórico
+    closeHistoryModal();
+    
+    // Mostrar notificação de sucesso
+    const history = StorageManager.getHistory();
+    const quote = history.find(q => q.id === id);
+    if (quote) {
+        showNotification(`Cotação "${quote.name}" carregada com sucesso!`);
+    }
 }
 
 // Delete quote from history
 function deleteQuoteFromHistory(id) {
-    if (confirm('Deseja realmente excluir esta cotação do histórico?')) {
+    const history = StorageManager.getHistory();
+    const quote = history.find(q => q.id === id);
+    
+    if (quote && confirm(`Tem certeza que deseja excluir a cotação "${quote.name}"?`)) {
         StorageManager.deleteFromHistory(id);
+        renderHistory();
+        showNotification('Cotação excluída com sucesso!');
     }
 }
 
@@ -562,14 +588,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (exportBtn) exportBtn.addEventListener('click', exportToPDF);
     
     // Modal event listeners
-    const modal = document.getElementById('saveQuoteModal');
+    const saveModal = document.getElementById('saveQuoteModal');
+    const historyModal = document.getElementById('historyModal');
     const quoteNameInput = document.getElementById('quoteName');
     
-    // Close modal when clicking outside
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
+    // Close modals when clicking outside
+    if (saveModal) {
+        saveModal.addEventListener('click', (e) => {
+            if (e.target === saveModal) {
                 closeSaveModal();
+            }
+        });
+    }
+    
+    if (historyModal) {
+        historyModal.addEventListener('click', (e) => {
+            if (e.target === historyModal) {
+                closeHistoryModal();
             }
         });
     }
@@ -583,10 +618,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Allow Esc key to close modal
+    // Allow Esc key to close modals
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modal && modal.classList.contains('active')) {
-            closeSaveModal();
+        if (e.key === 'Escape') {
+            if (saveModal && saveModal.classList.contains('active')) {
+                closeSaveModal();
+            }
+            if (historyModal && historyModal.classList.contains('active')) {
+                closeHistoryModal();
+            }
         }
     });
     
