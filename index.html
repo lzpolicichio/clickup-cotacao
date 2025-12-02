@@ -15,6 +15,64 @@
 
         <main class="calculator">
             <div class="form-section">
+                <!-- Currency Selector -->
+                <div class="currency-selector-section">
+                    <div class="form-group">
+                        <label for="currencySelector">💱 Moeda da Cotação</label>
+                        <select id="currencySelector" class="input-field" onchange="handleCurrencyChange()">
+                            <option value="usd">🇺🇸 Dólar Americano (USD)</option>
+                            <option value="brl">🇧🇷 Real Brasileiro (BRL)</option>
+                        </select>
+                    </div>
+                    
+                    <div id="exchangeRateContainer" style="display: none;">
+                        <div class="form-group">
+                            <label for="exchangeRate">💵 Taxa de Câmbio (USD → BRL)</label>
+                            <input 
+                                type="number" 
+                                id="exchangeRate" 
+                                class="input-field"
+                                step="0.01" 
+                                min="1" 
+                                value="5.50"
+                                placeholder="Ex: 5.50"
+                                onchange="handleExchangeRateChange()"
+                            />
+                            <small class="help-text">💡 Informe a cotação atual do dólar para cálculo em Reais</small>
+                        </div>
+                        
+                        <div class="tax-info-box">
+                            <h4>📊 Impostos Incluídos no Cálculo BRL</h4>
+                            <div class="tax-grid">
+                                <div class="tax-category">
+                                    <strong>Importação:</strong>
+                                    <ul>
+                                        <li>IR: 15%</li>
+                                        <li>IOF: 0,38%</li>
+                                        <li>Taxa: $30</li>
+                                    </ul>
+                                </div>
+                                <div class="tax-category">
+                                    <strong>Comercialização:</strong>
+                                    <ul>
+                                        <li>IRPJ: 4,8%</li>
+                                        <li>CSLL: 2,88%</li>
+                                        <li>ISS: 5%</li>
+                                        <li>PIS: 0,65%</li>
+                                        <li>COFINS: 3%</li>
+                                    </ul>
+                                </div>
+                                <div class="tax-category">
+                                    <strong>Margem:</strong>
+                                    <ul>
+                                        <li>Lucro: 25%</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="form-group">
                     <label for="productType">Tipo de Produto</label>
                     <select id="productType" class="input-field">

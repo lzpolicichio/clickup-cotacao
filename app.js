@@ -4,11 +4,15 @@
 // Quote state
 let quoteItems = [];
 let quoteIdCounter = 1;
+let currentCurrency = 'usd';
+let exchangeRate = 5.50; // Taxa padrão USD → BRL
 
 // Storage Manager for persistence
 const StorageManager = {
     STORAGE_KEY: 'clickup_quotes_history',
     CURRENT_KEY: 'clickup_current_quote',
+    CURRENCY_KEY: 'clickup_currency_preference',
+    EXCHANGE_KEY: 'clickup_exchange_rate',
     
     // Save current quote to localStorage (auto-save)
     saveCurrentQuote() {
@@ -109,14 +113,74 @@ function getQuantityDiscount(quantity) {
     return tier ? tier.discount : 0;
 }
 
-// Format currency in USD
+// Format currency based on current currency setting
 function formatCurrency(value) {
-    return new Intl.NumberFormat(CONFIG.currency.locale, {
+    const currencyConfig = CONFIG.currency[currentCurrency];
+    return new Intl.NumberFormat(currencyConfig.locale, {
         style: 'currency',
-        currency: CONFIG.currency.code,
+        currency: currencyConfig.code,
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     }).format(value);
+}
+
+// Calculate BRL price with all taxes and margin
+function calculateBRLPrice(usdPrice, quantity) {
+    const taxes = CONFIG.taxes;
+    
+    // 1. Custo em USD (preço base)
+    let costUSD = usdPrice;
+    
+    // 2. Adicionar taxa fixa de importação proporcional
+    const fixedFeePerUnit = taxes.importation.fixedFee / Math.max(quantity, 1);
+    costUSD += fixedFeePerUnit;
+    
+    // 3. Converter para BRL
+    let costBRL = costUSD * exchangeRate;
+    
+    // 4. Aplicar impostos de importação sobre o valor em BRL
+    const irAmount = costBRL * (taxes.importation.ir / 100);
+    const iofAmount = costBRL * (taxes.importation.iof / 100);
+    
+    const costWithImportTaxes = costBRL + irAmount + iofAmount;
+    
+    // 5. Calcular total de impostos de comercialização
+    const totalCommercializationTax = 
+        taxes.commercialization.irpj +
+        taxes.commercialization.csll +
+        taxes.commercialization.iss +
+        taxes.commercialization.pis +
+        taxes.commercialization.cofins;
+    
+    // 6. Calcular preço de venda considerando impostos e margem
+    // Fórmula: Preço = Custo / (1 - Impostos% - Margem%)
+    const totalDeduction = (totalCommercializationTax + taxes.targetMargin) / 100;
+    const sellingPrice = costWithImportTaxes / (1 - totalDeduction);
+    
+    const commercializationAmount = sellingPrice * (totalCommercializationTax / 100);
+    const marginAmount = sellingPrice - costWithImportTaxes - commercializationAmount;
+    
+    return {
+        usdPrice: costUSD,
+        exchangeRate: exchangeRate,
+        costBRLBeforeTaxes: costBRL,
+        costBRLWithImportTaxes: costWithImportTaxes,
+        taxes: {
+            importation: {
+                ir: irAmount,
+                iof: iofAmount,
+                fixedFee: fixedFeePerUnit * exchangeRate,
+                total: irAmount + iofAmount + (fixedFeePerUnit * exchangeRate)
+            },
+            commercialization: {
+                percentage: totalCommercializationTax,
+                amount: commercializationAmount
+            }
+        },
+        sellingPrice: sellingPrice,
+        margin: marginAmount,
+        marginPercentage: taxes.targetMargin
+    };
 }
 
 // Calculate license item
@@ -144,10 +208,23 @@ function calculateLicenseItem(data) {
     const totalDiscountRate = (quantityDiscount + commercialDiscount - (quantityDiscount * commercialDiscount / 100));
     const discountAmount = subtotal * (totalDiscountRate / 100);
     
-    // Final total
-    const total = subtotal - discountAmount;
-    const monthlyAverage = total / contract.months;
+    // Final total in USD
+    const totalUSD = subtotal - discountAmount;
+    const monthlyAverage = totalUSD / contract.months;
     const perUserPerMonth = monthlyAverage / data.quantity;
+    
+    // Calculate BRL if needed
+    let brlCalculation = null;
+    let finalTotal = totalUSD;
+    let finalMonthlyAverage = monthlyAverage;
+    let finalPerUserPerMonth = perUserPerMonth;
+    
+    if (currentCurrency === 'brl') {
+        brlCalculation = calculateBRLPrice(totalUSD, data.quantity);
+        finalTotal = brlCalculation.sellingPrice;
+        finalMonthlyAverage = finalTotal / contract.months;
+        finalPerUserPerMonth = finalMonthlyAverage / data.quantity;
+    }
     
     return {
         id: quoteIdCounter++,
@@ -162,9 +239,12 @@ function calculateLicenseItem(data) {
         commercialDiscount: commercialDiscount,
         totalDiscountRate: totalDiscountRate,
         discountAmount: discountAmount,
-        total: total,
-        monthlyAverage: monthlyAverage,
-        perUserPerMonth: perUserPerMonth
+        totalUSD: totalUSD,
+        total: finalTotal,
+        monthlyAverage: finalMonthlyAverage,
+        perUserPerMonth: finalPerUserPerMonth,
+        brlCalculation: brlCalculation,
+        currency: currentCurrency
     };
 }
 
@@ -193,10 +273,23 @@ function calculateAddonItem(data) {
     const totalDiscountRate = (quantityDiscount + commercialDiscount - (quantityDiscount * commercialDiscount / 100));
     const discountAmount = subtotal * (totalDiscountRate / 100);
     
-    // Final total
-    const total = subtotal - discountAmount;
-    const monthlyAverage = total / contract.months;
+    // Final total in USD
+    const totalUSD = subtotal - discountAmount;
+    const monthlyAverage = totalUSD / contract.months;
     const perUserPerMonth = monthlyAverage / data.quantity;
+    
+    // Calculate BRL if needed
+    let brlCalculation = null;
+    let finalTotal = totalUSD;
+    let finalMonthlyAverage = monthlyAverage;
+    let finalPerUserPerMonth = perUserPerMonth;
+    
+    if (currentCurrency === 'brl') {
+        brlCalculation = calculateBRLPrice(totalUSD, data.quantity);
+        finalTotal = brlCalculation.sellingPrice;
+        finalMonthlyAverage = finalTotal / contract.months;
+        finalPerUserPerMonth = finalMonthlyAverage / data.quantity;
+    }
     
     return {
         id: quoteIdCounter++,
@@ -211,9 +304,12 @@ function calculateAddonItem(data) {
         commercialDiscount: commercialDiscount,
         totalDiscountRate: totalDiscountRate,
         discountAmount: discountAmount,
-        total: total,
-        monthlyAverage: monthlyAverage,
-        perUserPerMonth: perUserPerMonth
+        totalUSD: totalUSD,
+        total: finalTotal,
+        monthlyAverage: finalMonthlyAverage,
+        perUserPerMonth: finalPerUserPerMonth,
+        brlCalculation: brlCalculation,
+        currency: currentCurrency
     };
 }
 
@@ -368,6 +464,63 @@ function renderQuote() {
                 <div class="detail-row discount-row">
                     <span>Desconto (${item.totalDiscountRate.toFixed(1)}%):</span>
                     <span>-${formatCurrency(item.discountAmount)}</span>
+                </div>
+                ` : ''}
+                ${item.brlCalculation ? `
+                <div class="brl-breakdown">
+                    <h4>💰 Detalhamento BRL</h4>
+                    <div class="breakdown-section">
+                        <div class="detail-row">
+                            <span>Valor em USD:</span>
+                            <span>$${item.totalUSD.toFixed(2)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Taxa de câmbio:</span>
+                            <span>R$ ${item.brlCalculation.exchangeRate.toFixed(2)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Custo base BRL:</span>
+                            <span>${formatCurrency(item.brlCalculation.costBRLBeforeTaxes)}</span>
+                        </div>
+                    </div>
+                    <div class="breakdown-section">
+                        <strong>Impostos de Importação:</strong>
+                        <div class="detail-row">
+                            <span>• IR (15%):</span>
+                            <span>${formatCurrency(item.brlCalculation.taxes.importation.ir)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>• IOF (0,38%):</span>
+                            <span>${formatCurrency(item.brlCalculation.taxes.importation.iof)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>• Taxa fixa ($30):</span>
+                            <span>${formatCurrency(item.brlCalculation.taxes.importation.fixedFee)}</span>
+                        </div>
+                        <div class="detail-row total-tax">
+                            <span>Total importação:</span>
+                            <span>${formatCurrency(item.brlCalculation.taxes.importation.total)}</span>
+                        </div>
+                    </div>
+                    <div class="breakdown-section">
+                        <div class="detail-row">
+                            <span>Custo + Imp. Importação:</span>
+                            <span>${formatCurrency(item.brlCalculation.costBRLWithImportTaxes)}</span>
+                        </div>
+                    </div>
+                    <div class="breakdown-section">
+                        <strong>Impostos Comercialização (${item.brlCalculation.taxes.commercialization.percentage.toFixed(2)}%):</strong>
+                        <div class="detail-row">
+                            <span>• IRPJ + CSLL + ISS + PIS + COFINS:</span>
+                            <span>${formatCurrency(item.brlCalculation.taxes.commercialization.amount)}</span>
+                        </div>
+                    </div>
+                    <div class="breakdown-section margin-section">
+                        <div class="detail-row">
+                            <span><strong>Margem (25%):</strong></span>
+                            <span><strong>${formatCurrency(item.brlCalculation.margin)}</strong></span>
+                        </div>
+                    </div>
                 </div>
                 ` : ''}
                 <div class="detail-row total-row">
@@ -586,6 +739,25 @@ function deleteQuoteFromHistory(id) {
 
 // Event listeners
 document.addEventListener('DOMContentLoaded', () => {
+    // Load currency preferences
+    const savedCurrency = localStorage.getItem('clickup_currency_preference');
+    const savedRate = localStorage.getItem('clickup_exchange_rate');
+    
+    if (savedCurrency) {
+        currentCurrency = savedCurrency;
+        const currencySelector = document.getElementById('currencySelector');
+        if (currencySelector) currencySelector.value = savedCurrency;
+    }
+    
+    if (savedRate) {
+        exchangeRate = parseFloat(savedRate);
+        const exchangeRateInput = document.getElementById('exchangeRate');
+        if (exchangeRateInput) exchangeRateInput.value = savedRate;
+    }
+    
+    // Show/hide exchange rate input
+    toggleExchangeRateInput();
+    
     // Load saved quote on startup
     if (StorageManager.loadCurrentQuote()) {
         renderQuote();
@@ -691,3 +863,99 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize empty quote display
     renderQuote();
 });
+
+// Currency management functions
+function toggleExchangeRateInput() {
+    const currencySelector = document.getElementById('currencySelector');
+    const rateContainer = document.getElementById('exchangeRateContainer');
+    
+    if (!currencySelector || !rateContainer) return;
+    
+    if (currencySelector.value === 'brl') {
+        rateContainer.style.display = 'block';
+    } else {
+        rateContainer.style.display = 'none';
+    }
+}
+
+function handleCurrencyChange() {
+    const currencySelector = document.getElementById('currencySelector');
+    const exchangeRateInput = document.getElementById('exchangeRate');
+    
+    if (!currencySelector) return;
+    
+    const newCurrency = currencySelector.value;
+    currentCurrency = newCurrency;
+    
+    // Save preference
+    localStorage.setItem('clickup_currency_preference', newCurrency);
+    
+    // Update exchange rate if BRL
+    if (newCurrency === 'brl' && exchangeRateInput && exchangeRateInput.value) {
+        exchangeRate = parseFloat(exchangeRateInput.value);
+        localStorage.setItem('clickup_exchange_rate', exchangeRate);
+    }
+    
+    // Toggle exchange rate input visibility
+    toggleExchangeRateInput();
+    
+    // Recalculate all items
+    recalculateAllItems();
+}
+
+function handleExchangeRateChange() {
+    const exchangeRateInput = document.getElementById('exchangeRate');
+    
+    if (!exchangeRateInput || !exchangeRateInput.value) return;
+    
+    const newRate = parseFloat(exchangeRateInput.value);
+    
+    if (newRate > 0) {
+        exchangeRate = newRate;
+        localStorage.setItem('clickup_exchange_rate', exchangeRate);
+        
+        // Recalculate all items if in BRL mode
+        if (currentCurrency === 'brl') {
+            recalculateAllItems();
+        }
+    }
+}
+
+function recalculateAllItems() {
+    // Recalculate each item with new currency/exchange rate
+    quoteItems = quoteItems.map(item => {
+        const data = {
+            quantity: item.quantity,
+            contractDuration: item.contract.id,
+            discountLevel: item.commercialDiscount
+        };
+        
+        if (item.type === 'license') {
+            // Find license type ID
+            const licenseEntry = Object.entries(CONFIG.licenses).find(([key, val]) => val.name === item.name);
+            if (licenseEntry) {
+                data.licenseType = licenseEntry[0];
+                return calculateLicenseItem(data);
+            }
+        } else if (item.type === 'addon') {
+            // Find addon type ID
+            const addonEntry = Object.entries(CONFIG.addons).find(([key, val]) => val.name === item.name);
+            if (addonEntry) {
+                data.addonType = addonEntry[0];
+                return calculateAddonItem(data);
+            }
+        }
+        
+        return item;
+    });
+    
+    // Re-render quote
+    renderQuote();
+    
+    // Save updated quote
+    StorageManager.saveCurrentQuote();
+    
+    // Show notification
+    const currencyName = CONFIG.currency[currentCurrency].name;
+    showNotification(`Cotação atualizada para ${currencyName}`);
+}

@@ -82,9 +82,40 @@ const CONFIG = {
     
     // Currency settings
     currency: {
-        code: 'USD',
-        symbol: '$',
-        locale: 'en-US'
+        usd: {
+            code: 'USD',
+            symbol: '$',
+            locale: 'en-US',
+            name: 'Dólar Americano'
+        },
+        brl: {
+            code: 'BRL',
+            symbol: 'R$',
+            locale: 'pt-BR',
+            name: 'Real Brasileiro'
+        }
+    },
+    
+    // Impostos e Taxas Brasil
+    taxes: {
+        // Impostos de Importação
+        importation: {
+            ir: 15,           // Imposto de Renda sobre remessa: 15%
+            iof: 0.38,        // IOF sobre câmbio: 0.38%
+            fixedFee: 30      // Taxa fixa de importação: $30 USD
+        },
+        
+        // Impostos de Comercialização no Brasil
+        commercialization: {
+            irpj: 4.8,        // IRPJ (Lucro Presumido): 4.8%
+            csll: 2.88,       // CSLL (Lucro Presumido): 2.88%
+            iss: 5,           // ISS (varia por município): 5%
+            pis: 0.65,        // PIS: 0.65%
+            cofins: 3         // COFINS: 3%
+        },
+        
+        // Margem desejada
+        targetMargin: 25      // Margem final desejada: 25%
     },
     
     // Business settings
