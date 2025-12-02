@@ -433,6 +433,11 @@ function toggleHistoryPanel() {
 // Render history panel
 function renderHistory() {
     const historyContainer = document.getElementById('historyList');
+    if (!historyContainer) {
+        console.error('History container not found');
+        return;
+    }
+    
     const history = StorageManager.getHistory();
     
     if (history.length === 0) {
@@ -495,12 +500,22 @@ document.addEventListener('DOMContentLoaded', () => {
         renderQuote();
     }
     
-    document.getElementById('addToQuoteBtn').addEventListener('click', addToQuote);
-    document.getElementById('clearQuoteBtn').addEventListener('click', clearQuote);
-    document.getElementById('printBtn').addEventListener('click', printQuotation);
-    document.getElementById('exportBtn').addEventListener('click', exportToPDF);
-    document.getElementById('saveQuoteBtn').addEventListener('click', saveQuoteToHistory);
-    document.getElementById('historyBtn').addEventListener('click', toggleHistoryPanel);
+    // Bind event listeners
+    const addBtn = document.getElementById('addToQuoteBtn');
+    const clearBtn = document.getElementById('clearQuoteBtn');
+    const printBtn = document.getElementById('printBtn');
+    const saveBtn = document.getElementById('saveQuoteBtn');
+    const historyBtn = document.getElementById('historyBtn');
+    
+    if (addBtn) addBtn.addEventListener('click', addToQuote);
+    if (clearBtn) clearBtn.addEventListener('click', clearQuote);
+    if (printBtn) printBtn.addEventListener('click', printQuotation);
+    if (saveBtn) saveBtn.addEventListener('click', saveQuoteToHistory);
+    if (historyBtn) historyBtn.addEventListener('click', toggleHistoryPanel);
+    
+    // Export button (may not exist in new version)
+    const exportBtn = document.getElementById('exportBtn');
+    if (exportBtn) exportBtn.addEventListener('click', exportToPDF);
     
     // Toggle between license and addon fields
     document.getElementById('productType').addEventListener('change', (e) => {
