@@ -128,23 +128,23 @@ function formatCurrency(value) {
 function calculateBRLPrice(usdPrice, quantity) {
     const taxes = CONFIG.taxes;
     
-    // 1. Custo em USD (preço base)
-    let costUSD = usdPrice;
+    // 1. Custo total em USD (preço base já calculado)
+    const totalUSD = usdPrice;
     
-    // 2. Adicionar taxa fixa de importação proporcional
-    const fixedFeePerUnit = taxes.importation.fixedFee / Math.max(quantity, 1);
-    costUSD += fixedFeePerUnit;
+    // 2. Converter para BRL usando taxa do usuário
+    let costBRL = totalUSD * exchangeRate;
     
-    // 3. Converter para BRL
-    let costBRL = costUSD * exchangeRate;
-    
-    // 4. Aplicar impostos de importação sobre o valor em BRL
+    // 3. Aplicar impostos de importação sobre o valor em BRL
     const irAmount = costBRL * (taxes.importation.ir / 100);
     const iofAmount = costBRL * (taxes.importation.iof / 100);
     
-    const costWithImportTaxes = costBRL + irAmount + iofAmount;
+    // 4. Adicionar taxa fixa de importação ($30 convertido para BRL)
+    const fixedFeeBRL = taxes.importation.fixedFee * exchangeRate;
     
-    // 5. Calcular total de impostos de comercialização
+    // 5. Custo total com impostos de importação
+    const costWithImportTaxes = costBRL + irAmount + iofAmount + fixedFeeBRL;
+    
+    // 6. Calcular total de impostos de comercialização
     const totalCommercializationTax = 
         taxes.commercialization.irpj +
         taxes.commercialization.csll +
@@ -152,34 +152,37 @@ function calculateBRLPrice(usdPrice, quantity) {
         taxes.commercialization.pis +
         taxes.commercialization.cofins;
     
-    // 6. Calcular preço de venda considerando impostos e margem
+    // 7. Calcular preço de venda considerando impostos e margem
     // Fórmula: Preço = Custo / (1 - Impostos% - Margem%)
     const totalDeduction = (totalCommercializationTax + taxes.targetMargin) / 100;
     const sellingPrice = costWithImportTaxes / (1 - totalDeduction);
     
+    // 8. Calcular valores dos impostos de comercialização
     const commercializationAmount = sellingPrice * (totalCommercializationTax / 100);
+    
+    // 9. Calcular margem real
     const marginAmount = sellingPrice - costWithImportTaxes - commercializationAmount;
     
     return {
-        usdPrice: costUSD,
+        usdPrice: totalUSD,
         exchangeRate: exchangeRate,
-        costBRLBeforeTaxes: costBRL,
-        costBRLWithImportTaxes: costWithImportTaxes,
+        costBRL: costBRL,
         taxes: {
             importation: {
                 ir: irAmount,
                 iof: iofAmount,
-                fixedFee: fixedFeePerUnit * exchangeRate,
-                total: irAmount + iofAmount + (fixedFeePerUnit * exchangeRate)
+                fixedFee: fixedFeeBRL,
+                total: irAmount + iofAmount + fixedFeeBRL
             },
             commercialization: {
                 percentage: totalCommercializationTax,
                 amount: commercializationAmount
             }
         },
+        costWithImportTaxes: costWithImportTaxes,
         sellingPrice: sellingPrice,
         margin: marginAmount,
-        marginPercentage: taxes.targetMargin
+        marginPercentage: (marginAmount / sellingPrice) * 100
     };
 }
 
@@ -449,6 +452,12 @@ function renderQuote() {
         const itemIcon = item.type === 'license' ? '📦' : '🔌';
         const itemTypeLabel = item.type === 'license' ? 'Licença' : 'Add-on';
         
+        // Calcular valor do primeiro ano
+        const firstYearValue = item.monthlyAverage * 12;
+        
+        // Desconto total aplicado
+        const totalDiscountApplied = item.totalDiscountRate || 0;
+        
         return `
         <div class="quote-item ${item.type === 'addon' ? 'addon-item-card' : ''} collapsed" data-id="${item.id}" data-item-index="${index}">
             <div class="quote-item-header" onclick="toggleItemDetails(${index})">
@@ -459,15 +468,28 @@ function renderQuote() {
                         <strong>${item.name}</strong>
                     </div>
                     <div class="quote-item-summary">
-                        <span class="summary-item">
-                            <strong>${item.quantity}</strong> ${item.quantity === 1 ? 'usuário' : 'usuários'}
+                        <span class="summary-item summary-highlight">
+                            <span class="summary-label">1º Ano</span>
+                            <strong>${formatCurrency(firstYearValue)}</strong>
                         </span>
                         <span class="summary-item">
-                            ${item.contract.name}
+                            <span class="summary-label">Por usuário</span>
+                            <strong>${formatCurrency(item.perUserPerMonth)}/mês</strong>
                         </span>
-                        <span class="summary-item total-summary">
-                            💰 <strong>${formatCurrency(item.total)}</strong>
+                        <span class="summary-item">
+                            <span class="summary-label">Usuários</span>
+                            <strong>${item.quantity}</strong>
                         </span>
+                        <span class="summary-item">
+                            <span class="summary-label">Duração</span>
+                            <strong>${item.contract.name}</strong>
+                        </span>
+                        ${totalDiscountApplied > 0 ? `
+                        <span class="summary-item summary-discount">
+                            <span class="summary-label">Desconto</span>
+                            <strong>${totalDiscountApplied.toFixed(1)}%</strong>
+                        </span>
+                        ` : ''}
                     </div>
                 </div>
                 <div class="header-actions">
@@ -491,23 +513,23 @@ function renderQuote() {
                 ` : ''}
                 ${item.brlCalculation ? `
                 <div class="brl-breakdown">
-                    <h4>💰 Detalhamento BRL</h4>
+                    <h4>💰 Detalhamento de Custos (BRL)</h4>
                     <div class="breakdown-section">
                         <div class="detail-row">
-                            <span>Valor em USD:</span>
+                            <span>Valor base em USD:</span>
                             <span>$${item.totalUSD.toFixed(2)}</span>
                         </div>
                         <div class="detail-row">
-                            <span>Taxa de câmbio:</span>
-                            <span>R$ ${item.brlCalculation.exchangeRate.toFixed(2)}</span>
+                            <span>Taxa de câmbio utilizada:</span>
+                            <span>R$ ${item.brlCalculation.exchangeRate.toFixed(4)}</span>
                         </div>
                         <div class="detail-row">
-                            <span>Custo base BRL:</span>
-                            <span>${formatCurrency(item.brlCalculation.costBRLBeforeTaxes)}</span>
+                            <span>Custo base em BRL:</span>
+                            <span>${formatCurrency(item.brlCalculation.costBRL)}</span>
                         </div>
                     </div>
                     <div class="breakdown-section">
-                        <strong>Impostos de Importação:</strong>
+                        <strong>📥 Impostos de Importação:</strong>
                         <div class="detail-row">
                             <span>• IR (15%):</span>
                             <span>${formatCurrency(item.brlCalculation.taxes.importation.ir)}</span>
@@ -524,30 +546,55 @@ function renderQuote() {
                             <span>Total importação:</span>
                             <span>${formatCurrency(item.brlCalculation.taxes.importation.total)}</span>
                         </div>
-                    </div>
-                    <div class="breakdown-section">
                         <div class="detail-row">
-                            <span>Custo + Imp. Importação:</span>
-                            <span>${formatCurrency(item.brlCalculation.costBRLWithImportTaxes)}</span>
+                            <span><strong>Custo + Impostos Importação:</strong></span>
+                            <span><strong>${formatCurrency(item.brlCalculation.costWithImportTaxes)}</strong></span>
                         </div>
                     </div>
                     <div class="breakdown-section">
-                        <strong>Impostos Comercialização (${item.brlCalculation.taxes.commercialization.percentage.toFixed(2)}%):</strong>
+                        <strong>🏪 Impostos de Comercialização (${item.brlCalculation.taxes.commercialization.percentage.toFixed(2)}%):</strong>
                         <div class="detail-row">
-                            <span>• IRPJ + CSLL + ISS + PIS + COFINS:</span>
+                            <span>• IRPJ (4,8%)</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>• CSLL (2,88%)</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>• ISS (5%)</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>• PIS (0,65%)</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>• COFINS (3%)</span>
+                        </div>
+                        <div class="detail-row total-tax">
+                            <span>Valor total:</span>
                             <span>${formatCurrency(item.brlCalculation.taxes.commercialization.amount)}</span>
                         </div>
                     </div>
-                    <div class="breakdown-section margin-section">
-                        <div class="detail-row">
-                            <span><strong>Margem (25%):</strong></span>
+                    <div class="breakdown-section">
+                        <div class="detail-row margin-info">
+                            <span><strong>💚 Margem de Lucro (${item.brlCalculation.marginPercentage.toFixed(2)}%):</strong></span>
+                            <span><strong>${formatCurrency(item.brlCalculation.margin)}</strong></span>
+                        </div>
+                    </div>
+                    <div class="price-breakdown-total">
+                        <strong>Preço Final de Venda: ${formatCurrency(item.brlCalculation.sellingPrice)}</strong>
+                    </div>
+                </div>
+                ` : ''}
+                <div class="detail-row total-row">
+                    <span>Total do Contrato:</span>
+                    <span>${formatCurrency(item.total)}</span>
+                </div>
                             <span><strong>${formatCurrency(item.brlCalculation.margin)}</strong></span>
                         </div>
                     </div>
                 </div>
                 ` : ''}
                 <div class="detail-row total-row">
-                    <span>Total:</span>
+                    <span>Total do Contrato:</span>
                     <span>${formatCurrency(item.total)}</span>
                 </div>
                 <div class="detail-row monthly-row">
