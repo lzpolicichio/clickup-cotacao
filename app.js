@@ -823,16 +823,49 @@ function loadQuoteFromHistory(id) {
     }
 }
 
-// Delete quote from history
-function deleteQuoteFromHistory(id) {
+// Variable to store quote ID to be deleted
+let deleteQuoteId = null;
+
+// Open delete confirmation modal
+function openDeleteHistoryModal(id) {
     const history = StorageManager.getHistory();
     const quote = history.find(q => q.id === id);
     
-    if (quote && confirm(`Tem certeza que deseja excluir a cotação "${quote.name}"?`)) {
-        StorageManager.deleteFromHistory(id);
+    if (!quote) return;
+    
+    deleteQuoteId = id;
+    
+    const modal = document.getElementById('deleteHistoryModal');
+    const quoteName = document.getElementById('deleteQuoteName');
+    
+    if (modal && quoteName) {
+        quoteName.textContent = quote.name;
+        modal.classList.add('active');
+    }
+}
+
+// Close delete confirmation modal
+function closeDeleteHistoryModal() {
+    const modal = document.getElementById('deleteHistoryModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+    deleteQuoteId = null;
+}
+
+// Confirm and execute delete from history
+function confirmDeleteFromHistory() {
+    if (deleteQuoteId) {
+        StorageManager.deleteFromHistory(deleteQuoteId);
         renderHistory();
+        closeDeleteHistoryModal();
         showNotification('Cotação excluída com sucesso!');
     }
+}
+
+// Delete quote from history
+function deleteQuoteFromHistory(id) {
+    openDeleteHistoryModal(id);
 }
 
 // Event listeners
@@ -909,6 +942,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
+    const deleteHistoryModal = document.getElementById('deleteHistoryModal');
+    if (deleteHistoryModal) {
+        deleteHistoryModal.addEventListener('click', (e) => {
+            if (e.target === deleteHistoryModal) {
+                closeDeleteHistoryModal();
+            }
+        });
+    }
+    
     // Allow Enter key to confirm save
     if (quoteNameInput) {
         quoteNameInput.addEventListener('keypress', (e) => {
@@ -929,6 +971,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (clearModal && clearModal.classList.contains('active')) {
                 closeClearModal();
+            }
+            const deleteHistoryModal = document.getElementById('deleteHistoryModal');
+            if (deleteHistoryModal && deleteHistoryModal.classList.contains('active')) {
+                closeDeleteHistoryModal();
             }
         }
     });
@@ -973,7 +1019,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (action === 'load') {
                 loadQuoteFromHistory(id);
             } else if (action === 'delete') {
-                deleteQuoteFromHistory(id);
+                openDeleteHistoryModal(id);
             }
         });
     }
