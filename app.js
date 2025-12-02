@@ -409,13 +409,57 @@ function exportToPDF() {
 
 // Save current quote to history
 function saveQuoteToHistory() {
-    const name = prompt('Digite um nome para esta cotação:', `Cotação ${new Date().toLocaleDateString('pt-BR')}`);
-    if (name === null) return; // User cancelled
+    openSaveModal();
+}
+
+// Open the save modal
+function openSaveModal() {
+    const modal = document.getElementById('saveQuoteModal');
+    const input = document.getElementById('quoteName');
+    
+    if (!modal || !input) {
+        console.error('Modal elements not found');
+        return;
+    }
+    
+    // Set default name
+    const defaultName = `Cotação ${new Date().toLocaleDateString('pt-BR')}`;
+    input.value = defaultName;
+    
+    // Show modal
+    modal.classList.add('active');
+    
+    // Focus input and select text
+    setTimeout(() => {
+        input.focus();
+        input.select();
+    }, 100);
+}
+
+// Close the save modal
+function closeSaveModal() {
+    const modal = document.getElementById('saveQuoteModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+// Confirm save quote
+function confirmSaveQuote() {
+    const input = document.getElementById('quoteName');
+    const name = input.value.trim();
+    
+    if (!name) {
+        alert('Por favor, digite um nome para a cotação');
+        input.focus();
+        return;
+    }
     
     const saved = StorageManager.saveToHistory(name);
     if (saved) {
         showNotification(`Cotação "${saved.name}" salva com sucesso!`);
         renderHistory();
+        closeSaveModal();
     }
 }
 
@@ -516,6 +560,35 @@ document.addEventListener('DOMContentLoaded', () => {
     // Export button (may not exist in new version)
     const exportBtn = document.getElementById('exportBtn');
     if (exportBtn) exportBtn.addEventListener('click', exportToPDF);
+    
+    // Modal event listeners
+    const modal = document.getElementById('saveQuoteModal');
+    const quoteNameInput = document.getElementById('quoteName');
+    
+    // Close modal when clicking outside
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeSaveModal();
+            }
+        });
+    }
+    
+    // Allow Enter key to confirm save
+    if (quoteNameInput) {
+        quoteNameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                confirmSaveQuote();
+            }
+        });
+    }
+    
+    // Allow Esc key to close modal
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal && modal.classList.contains('active')) {
+            closeSaveModal();
+        }
+    });
     
     // Toggle between license and addon fields
     document.getElementById('productType').addEventListener('change', (e) => {

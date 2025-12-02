@@ -115,6 +115,31 @@
         </footer>
     </div>
 
+    <!-- Modal para Salvar Cotação -->
+    <div id="saveQuoteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>💾 Salvar Cotação</h3>
+                <button class="modal-close" onclick="closeSaveModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label for="quoteName">Nome da Cotação:</label>
+                <input 
+                    type="text" 
+                    id="quoteName" 
+                    class="modal-input"
+                    placeholder="Ex: Proposta Cliente XYZ - Dezembro 2024"
+                    autocomplete="off"
+                />
+                <p class="modal-hint">💡 Dica: Use um nome descritivo para encontrar facilmente depois</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeSaveModal()">Cancelar</button>
+                <button class="btn-confirm" onclick="confirmSaveQuote()">💾 Salvar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="config.js"></script>
     <script src="app.js"></script>
 </body>
