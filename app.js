@@ -588,15 +588,6 @@ function renderQuote() {
                     <span>Total do Contrato:</span>
                     <span>${formatCurrency(item.total)}</span>
                 </div>
-                            <span><strong>${formatCurrency(item.brlCalculation.margin)}</strong></span>
-                        </div>
-                    </div>
-                </div>
-                ` : ''}
-                <div class="detail-row total-row">
-                    <span>Total do Contrato:</span>
-                    <span>${formatCurrency(item.total)}</span>
-                </div>
                 <div class="detail-row monthly-row">
                     <span>Média mensal:</span>
                     <span>${formatCurrency(item.monthlyAverage)}/mês</span>
