@@ -140,8 +140,7 @@ const StorageManager = {
         const history = this.getHistory();
         const filtered = history.filter(q => q.id !== id);
         storage.setItem(this.STORAGE_KEY, JSON.stringify(filtered));
-        renderHistory();
-        showNotification('Cotação excluída');
+        return filtered;
     }
 };
 
@@ -781,17 +780,17 @@ function renderHistory() {
         const timeStr = date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
         
         return `
-            <div class="history-item">
+            <div class="history-item" data-quote-id="${quote.id}">
                 <div class="history-item-header">
                     <div class="history-item-info">
                         <strong>${quote.name}</strong>
                         <small>${dateStr} às ${timeStr}</small>
                     </div>
                     <div class="history-item-actions">
-                        <button onclick="loadQuoteFromHistory(${quote.id})" class="btn-load" title="Carregar">
+                        <button class="btn-load" data-action="load" data-id="${quote.id}" title="Carregar">
                             📂 Carregar
                         </button>
-                        <button onclick="deleteQuoteFromHistory(${quote.id})" class="btn-delete-history" title="Excluir">
+                        <button class="btn-delete-history" data-action="delete" data-id="${quote.id}" title="Excluir">
                             🗑️
                         </button>
                     </div>
@@ -958,6 +957,26 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+    
+    // Event delegation for history items (works better in iframes)
+    const historyList = document.getElementById('historyList');
+    if (historyList) {
+        historyList.addEventListener('click', (e) => {
+            const target = e.target.closest('button[data-action]');
+            if (!target) return;
+            
+            const action = target.getAttribute('data-action');
+            const id = parseInt(target.getAttribute('data-id'));
+            
+            if (!id) return;
+            
+            if (action === 'load') {
+                loadQuoteFromHistory(id);
+            } else if (action === 'delete') {
+                deleteQuoteFromHistory(id);
+            }
+        });
+    }
     
     // Initialize empty quote display
     renderQuote();
