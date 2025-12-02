@@ -144,6 +144,24 @@
         </div>
     </div>
 
+    <!-- Modal de Confirmação para Limpar Tudo -->
+    <div id="clearConfirmModal" class="modal">
+        <div class="modal-content modal-confirm">
+            <div class="modal-header">
+                <h3>⚠️ Confirmar Limpeza</h3>
+                <button class="modal-close" onclick="closeClearModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja limpar toda a cotação?</p>
+                <p class="modal-warning">⚠️ Esta ação não pode ser desfeita. Todos os itens serão removidos.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeClearModal()">Cancelar</button>
+                <button class="btn-confirm btn-danger" onclick="confirmClearQuote()">🗑️ Limpar Tudo</button>
+            </div>
+        </div>
+    </div>
+
     <script src="config.js"></script>
     <script src="app.js"></script>
 </body>

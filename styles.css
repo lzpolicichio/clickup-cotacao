@@ -1007,3 +1007,30 @@ footer {
 .modal-large .modal-body::-webkit-scrollbar-thumb:hover {
     background: var(--primary-dark);
 }
+
+/* ===========================
+   MODAL CONFIRM (CONFIRMAÇÃO)
+   =========================== */
+.modal-confirm {
+    max-width: 450px;
+}
+
+.modal-warning {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 12px;
+    border-radius: 6px;
+    margin-top: 12px;
+    font-size: 13px;
+    color: #856404;
+}
+
+/* Botão de perigo para ações destrutivas */
+.btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #c82333 0%, #bd2130 100%) !important;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}

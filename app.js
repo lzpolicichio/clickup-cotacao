@@ -295,12 +295,33 @@ function clearQuote() {
         return;
     }
     
-    if (confirm('Tem certeza que deseja limpar toda a cotação?')) {
-        quoteItems = [];
-        renderQuote();
-        StorageManager.clearCurrentQuote();
-        showNotification('Cotação limpa com sucesso!');
+    // Abrir modal de confirmação ao invés de confirm()
+    openClearModal();
+}
+
+// Open clear confirmation modal
+function openClearModal() {
+    const modal = document.getElementById('clearConfirmModal');
+    if (modal) {
+        modal.classList.add('active');
     }
+}
+
+// Close clear confirmation modal
+function closeClearModal() {
+    const modal = document.getElementById('clearConfirmModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+// Confirm and execute clear quote
+function confirmClearQuote() {
+    quoteItems = [];
+    renderQuote();
+    StorageManager.clearCurrentQuote();
+    closeClearModal();
+    showNotification('Cotação limpa com sucesso!');
 }
 
 // Render quote items
@@ -590,6 +611,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Modal event listeners
     const saveModal = document.getElementById('saveQuoteModal');
     const historyModal = document.getElementById('historyModal');
+    const clearModal = document.getElementById('clearConfirmModal');
     const quoteNameInput = document.getElementById('quoteName');
     
     // Close modals when clicking outside
@@ -605,6 +627,14 @@ document.addEventListener('DOMContentLoaded', () => {
         historyModal.addEventListener('click', (e) => {
             if (e.target === historyModal) {
                 closeHistoryModal();
+            }
+        });
+    }
+    
+    if (clearModal) {
+        clearModal.addEventListener('click', (e) => {
+            if (e.target === clearModal) {
+                closeClearModal();
             }
         });
     }
@@ -626,6 +656,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (historyModal && historyModal.classList.contains('active')) {
                 closeHistoryModal();
+            }
+            if (clearModal && clearModal.classList.contains('active')) {
+                closeClearModal();
             }
         }
     });
