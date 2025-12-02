@@ -300,7 +300,7 @@ header h1 {
 
 .action-buttons {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 12px;
     margin-top: 24px;
 }
@@ -324,6 +324,28 @@ footer {
     margin: 0;
     color: var(--text-primary);
     font-size: 1.8rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-history {
+    padding: 8px 16px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-history:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
 }
 
 .btn-clear {
@@ -743,7 +765,13 @@ footer {
         align-items: flex-start;
     }
     
-    .btn-clear {
+    .header-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    .btn-clear,
+    .btn-history {
         width: 100%;
     }
 }
