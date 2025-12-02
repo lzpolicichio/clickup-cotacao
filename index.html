@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClickUp - Calculadora de Cotação</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>📊 Calculadora de Cotação ClickUp</h1>
+            <p class="subtitle">Simule cotações de licenças ClickUp de forma rápida e precisa</p>
+        </header>
+
+        <main class="calculator">
+            <div class="form-section">
+                <div class="form-group">
+                    <label for="productType">Tipo de Produto</label>
+                    <select id="productType" class="input-field">
+                        <option value="license">Licença ClickUp</option>
+                        <option value="addon">Add-on</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="licenseGroup">
+                    <label for="licenseType">Tipo de Licença</label>
+                    <select id="licenseType" class="input-field">
+                        <option value="">Selecione o tipo de licença</option>
+                        <option value="unlimited">Unlimited</option>
+                        <option value="business">Business</option>
+                        <option value="businessPlus">Business Plus</option>
+                        <option value="enterprise">Enterprise</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="addonGroup" style="display: none;">
+                    <label for="addonType">Tipo de Add-on</label>
+                    <select id="addonType" class="input-field">
+                        <option value="">Selecione o add-on</option>
+                        <option value="brainAI">Brain AI - Assistente inteligente com IA</option>
+                        <option value="notekerAI">Noteker AI - Transcrição e anotações</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="quantity">Quantidade de Licenças</label>
+                    <input type="number" id="quantity" class="input-field" min="1" value="10" placeholder="Ex: 10">
+                    <small class="help-text">Número de usuários que utilizarão o ClickUp</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="contractDuration">Duração do Contrato</label>
+                    <select id="contractDuration" class="input-field">
+                        <option value="annual1" selected>1 Ano</option>
+                        <option value="annual2">2 Anos</option>
+                        <option value="annual3">3 Anos</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="discountLevel">Desconto Comercial (%)</label>
+                    <input type="number" id="discountLevel" class="input-field" min="0" max="100" step="0.1" value="0" placeholder="Ex: 15">
+                    <small class="help-text">Digite o percentual de desconto comercial (0 a 100%)</small>
+                </div>
+
+                <button id="addToQuoteBtn" class="btn-primary">➕ Adicionar à Cotação</button>
+            </div>
+
+            <div class="quote-section">
+                <div class="quote-header">
+                    <h2>Cotação Atual</h2>
+                    <button id="clearQuoteBtn" class="btn-clear">🗑️ Limpar Tudo</button>
+                </div>
+                
+                <div id="emptyQuote" class="empty-state">
+                    <p>Nenhum item adicionado ainda</p>
+                    <small>Configure uma simulação e clique em "Adicionar à Cotação"</small>
+                </div>
+
+                <div id="quoteItems" class="quote-items"></div>
+
+                <div id="quoteSummary" class="quote-summary" style="display: none;">
+                    <div class="summary-row">
+                        <span>Subtotal:</span>
+                        <span id="quoteSubtotal">$0.00</span>
+                    </div>
+                    <div class="summary-row total-row">
+                        <span>Total da Cotação:</span>
+                        <span id="quoteTotal">$0.00</span>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button id="printBtn" class="btn-secondary">🖨️ Imprimir Cotação</button>
+                        <button id="exportBtn" class="btn-secondary">📄 Exportar PDF</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>© 2025 Volari - Revenda Autorizada ClickUp</p>
+        </footer>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
