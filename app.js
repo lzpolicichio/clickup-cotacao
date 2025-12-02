@@ -1,6 +1,44 @@
 // Quote management system for ClickUp licenses and addons
 // Uses CONFIG from config.js
 
+// Test localStorage availability
+function isLocalStorageAvailable() {
+    try {
+        const test = '__storage_test__';
+        localStorage.setItem(test, test);
+        localStorage.removeItem(test);
+        return true;
+    } catch (e) {
+        console.warn('localStorage not available, using in-memory storage', e);
+        return false;
+    }
+}
+
+// Fallback storage for when localStorage is blocked (e.g., in iframes)
+const memoryStorage = {
+    _data: {},
+    getItem(key) {
+        return this._data[key] || null;
+    },
+    setItem(key, value) {
+        this._data[key] = value;
+    },
+    removeItem(key) {
+        delete this._data[key];
+    },
+    clear() {
+        this._data = {};
+    }
+};
+
+// Use localStorage or fallback
+const storage = isLocalStorageAvailable() ? localStorage : memoryStorage;
+
+// Show storage warning if using fallback
+if (!isLocalStorageAvailable()) {
+    console.warn('⚠️ Using in-memory storage - data will not persist after page reload');
+}
+
 // Quote state
 let quoteItems = [];
 let quoteIdCounter = 1;
@@ -21,12 +59,12 @@ const StorageManager = {
             counter: quoteIdCounter,
             timestamp: new Date().toISOString()
         };
-        localStorage.setItem(this.CURRENT_KEY, JSON.stringify(currentData));
+        storage.setItem(this.CURRENT_KEY, JSON.stringify(currentData));
     },
     
     // Load current quote from localStorage
     loadCurrentQuote() {
-        const data = localStorage.getItem(this.CURRENT_KEY);
+        const data = storage.getItem(this.CURRENT_KEY);
         if (data) {
             try {
                 const parsed = JSON.parse(data);
@@ -43,7 +81,7 @@ const StorageManager = {
     
     // Clear current quote
     clearCurrentQuote() {
-        localStorage.removeItem(this.CURRENT_KEY);
+        storage.removeItem(this.CURRENT_KEY);
     },
     
     // Save named quote to history
@@ -72,13 +110,13 @@ const StorageManager = {
             history.length = 50;
         }
         
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(history));
+        storage.setItem(this.STORAGE_KEY, JSON.stringify(history));
         return savedQuote;
     },
     
     // Get all saved quotes
     getHistory() {
-        const data = localStorage.getItem(this.STORAGE_KEY);
+        const data = storage.getItem(this.STORAGE_KEY);
         return data ? JSON.parse(data) : [];
     },
     
@@ -101,7 +139,7 @@ const StorageManager = {
     deleteFromHistory(id) {
         const history = this.getHistory();
         const filtered = history.filter(q => q.id !== id);
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(filtered));
+        storage.setItem(this.STORAGE_KEY, JSON.stringify(filtered));
         renderHistory();
         showNotification('Cotação excluída');
     }
@@ -801,8 +839,8 @@ function deleteQuoteFromHistory(id) {
 // Event listeners
 document.addEventListener('DOMContentLoaded', () => {
     // Load currency preferences
-    const savedCurrency = localStorage.getItem('clickup_currency_preference');
-    const savedRate = localStorage.getItem('clickup_exchange_rate');
+    const savedCurrency = storage.getItem('clickup_currency_preference');
+    const savedRate = storage.getItem('clickup_exchange_rate');
     
     if (savedCurrency) {
         currentCurrency = savedCurrency;
@@ -949,12 +987,12 @@ function handleCurrencyChange() {
     currentCurrency = newCurrency;
     
     // Save preference
-    localStorage.setItem('clickup_currency_preference', newCurrency);
+    storage.setItem('clickup_currency_preference', newCurrency);
     
     // Update exchange rate if BRL
     if (newCurrency === 'brl' && exchangeRateInput && exchangeRateInput.value) {
         exchangeRate = parseFloat(exchangeRateInput.value);
-        localStorage.setItem('clickup_exchange_rate', exchangeRate);
+        storage.setItem('clickup_exchange_rate', exchangeRate);
     }
     
     // Toggle exchange rate input visibility
@@ -973,7 +1011,7 @@ function handleExchangeRateChange() {
     
     if (newRate > 0) {
         exchangeRate = newRate;
-        localStorage.setItem('clickup_exchange_rate', exchangeRate);
+        storage.setItem('clickup_exchange_rate', exchangeRate);
         
         // Recalculate all items if in BRL mode
         if (currentCurrency === 'brl') {
